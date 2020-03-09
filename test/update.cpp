@@ -687,3 +687,71 @@ void testHmac() {
   assert(compareHash(result,digest) == true);
   //assert(output == HMAC(EVP_sha256(), key, key_length, (const unsigned char*)message, message_length, result, NULL)); 
 }
+
+void xor_reconstruct(char* int1, char* int2, int output_length, Integer* output) {
+  Integer intMsg1[output_length];
+  for (int i = 0; i < output_length; i++) {
+    intMsg1[i] = Integer(8, int1[i], ALICE);
+  }
+  Integer intMsg2[output_length];
+  for (int i = 0; i < output_length; i++) {
+    intMsg2[i] = Integer(8, int2[i], BOB);
+  }
+
+  for (int i = 0; i < output_length; i++) {
+  	output[i] = intMsg1[i] ^ intMsg2[i]; 
+  }
+
+  return;
+
+}
+
+int main(int argc, char** argv) {
+
+  static int BITMASK_LENGTH = 32;
+  static int SN_LENGTH = 12; 
+  static int CID_LENGTH = 4;
+  static int DATA_LENGTH = SN_LENGTH + CID_LENGTH;
+  static int KEY_LENGTH = 64; 
+  static int RANDOM_LENGTH = 32; 
+  
+  int port, party;
+  parse_party_and_port(argv, &party, &port);
+
+  char* k_share = argv[3];
+  char* p = argv[4];
+  char* r = argv[5];
+  char* rprime = argv[6];
+
+
+//	NetIO * io = new NetIO(party==ALICE ? nullptr : "10.116.70.95", port);
+//	NetIO * io = new NetIO(party==ALICE ? nullptr : "10.38.26.99", port); // Andrew
+	NetIO * io = new NetIO(party==ALICE ? nullptr : "127.0.0.1", port);
+
+  setup_semi_honest(io, party);
+
+  Integer k_reconstruct[KEY_LENGTH];
+  Integer p_reconstruct[DATA_LENGTH];
+
+  for (int i = 0; i < KEY_LENGTH; i++) {
+    k_reconstruct[i] = Integer(8, k_share[i], PUBLIC);
+  }
+  for (int i = 0; i < DATA_LENGTH; i++) {
+    p_reconstruct[i] = Integer(8, p[i], PUBLIC);
+  }
+
+  printIntegerArray(p_reconstruct,DATA_LENGTH,8);
+  xor_reconstruct(k_share,k_share,KEY_LENGTH, k_reconstruct); 
+  xor_reconstruct(p,p,DATA_LENGTH, p_reconstruct); 
+  printIntegerArray(p_reconstruct,DATA_LENGTH,8);
+
+
+  //runHmac(k, 32, k, 32);
+  //runHmac();
+
+  // testHmac((char*)"abcdefghabcdefghabcdefghabcdefgh\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", 64,
+  //            (char*)"abcdefghabcdefghabcdefghabcdefgh\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", 64);
+
+	delete io;
+	return 0;
+}
